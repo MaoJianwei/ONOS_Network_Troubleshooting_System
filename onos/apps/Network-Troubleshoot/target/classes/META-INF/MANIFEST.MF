@@ -1,0 +1,27 @@
+Manifest-Version: 1.0
+Bnd-LastModified: 1449147637809
+Build-Jdk: 1.8.0_66
+Built-By: mao
+Bundle-Description: ONOS OSGi bundle archetype
+Bundle-License: http://www.apache.org/licenses/LICENSE-2.0.txt
+Bundle-ManifestVersion: 2
+Bundle-Name: Network-Troubleshoot
+Bundle-SymbolicName: org.onosproject.FNL.Network-Troubleshoot
+Bundle-Version: 1.4.0.SNAPSHOT
+Created-By: Apache Maven Bundle Plugin
+Export-Package: org.onosproject.FNL;uses:="org.onosproject.net.NetworkTr
+ oubleshoot,org.onosproject.net.device,org.onosproject.net.flow,org.onos
+ project.net.host";version="1.4.0"
+Import-Package: org.onosproject.net;version="[1.4,2)",org.onosproject.ne
+ t.NetworkTroubleshoot;version="[1.4,2)",org.onosproject.net.device;vers
+ ion="[1.4,2)",org.onosproject.net.flow;version="[1.4,2)",org.onosprojec
+ t.net.host;version="[1.4,2)",org.slf4j;version="[1.7,2)"
+Provide-Capability: osgi.service;effective:=active;objectClass="org.onos
+ project.net.NetworkTroubleshoot.NetworkTS"
+Require-Capability: osgi.service;effective:=active;filter:="(objectClass
+ =org.onosproject.net.flow.FlowRuleService)",osgi.service;effective:=act
+ ive;filter:="(objectClass=org.onosproject.net.device.DeviceService)",os
+ gi.service;effective:=active;filter:="(objectClass=org.onosproject.net.
+ host.HostService)",osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=1.8))"
+Service-Component: OSGI-INF/org.onosproject.FNL.AppComponent.xml
+Tool: Bnd-2.4.0.201411031534
