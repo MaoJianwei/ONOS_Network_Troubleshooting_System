@@ -17,7 +17,7 @@
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="Network-Troubleshoot-1.4.0-SNAPSHOT">
     <repository>mvn:org.onosproject.FNL/Network-Troubleshoot/1.4.0-SNAPSHOT/xml/features</repository>
     <feature name="Network-Troubleshoot" version="1.4.0-SNAPSHOT"
-             description="ONOS OSGi bundle archetype">
+             description="1.0.0, ONOS Network TroubleShoot Module, BUPT">
         <feature>onos-api</feature>
         <bundle>mvn:org.onosproject.FNL/Network-Troubleshoot/1.4.0-SNAPSHOT</bundle>
     </feature>
