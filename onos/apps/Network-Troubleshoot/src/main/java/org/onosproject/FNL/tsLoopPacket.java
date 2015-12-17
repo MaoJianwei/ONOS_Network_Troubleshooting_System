@@ -54,7 +54,7 @@ public class tsLoopPacket implements Serializable {
         }
     }
 
-    ;
+
 
     public Criterion getHeader(Criterion.Type criterionType) {
         return match.get(criterionType); // TODO - check is null when the key is not contained?
@@ -64,7 +64,7 @@ public class tsLoopPacket implements Serializable {
         return match.containsKey(criterionType);
     }
 
-    ;
+
 
 
     public boolean pushPathFlow(FlowEntry entry) {
@@ -72,34 +72,36 @@ public class tsLoopPacket implements Serializable {
         return true;
     }
 
-    ;
+
 
     public boolean popPathFlow() {// no need
         pathFlow.pop();
         return true;
     }
 
-    ;
+    public Iterator<DeviceId> getPathDevice(){
+        return pathDevice.iterator();
+    }
+
+
 
     public boolean pushPathDeviceId(DeviceId deviceId) {
         pathDevice.push(deviceId);
         return true;
     }
 
-    ;
+
 
     public boolean popPathDeviceId() {
         pathDevice.pop();
         return true;
     }
 
-    ;
 
     public boolean existDeviceId(DeviceId deviceId) {
         return pathDevice.contains(deviceId);
     }
 
-    ;
 
     public PortCriterion getInport() {                       // TODO - check In_PORT or IN_PHY_PORT
         if (match.containsKey(Criterion.Type.IN_PORT)) {
@@ -114,33 +116,32 @@ public class tsLoopPacket implements Serializable {
 
 
     /**
-     * @param collision: as return value: if criterion contain mutiple criterion with same type, it is true
+     * @param collision: as return value: if criteria contain mutiple criteria with same type, it is true
      * @return tsLoopPacket: if anyone is SetHeader_FAILURE, return null
      */
-    public static tsLoopPacket matchBuilder(Iterable<Criterion> criterion, Boolean collision) {
+    public static tsLoopPacket matchBuilder(Iterable<Criterion> criteria, Return<Boolean> collision) {
 
         if (null != collision) {
-            collision = true;
+            collision.setValue(false);
         }
 
         tsLoopPacket pkt = new tsLoopPacket();
 
-        for (Criterion criteria : criterion) {
+        for (Criterion criterion : criteria) {
             if (null == pkt) {
                 break;
             }
 
-            switch (pkt.setHeader(criteria)) {
-                case SetHeader_SUCCESS:
-                    break;
-                case SetHeader_OVERRIDE:
-                    if (null != collision) {
-                        collision = false;
-                    }
-                    break;
-                case SetHeader_FAILURE:
-                    pkt = null;
-                    break;
+            int ret = pkt.setHeader(criterion);
+
+            if(SetHeader_SUCCESS == ret){
+
+            }else if (SetHeader_OVERRIDE == ret){
+                if (null != collision) {
+                    collision.setValue(true);
+                }
+            }else{ // SetHeader_FAILURE
+                pkt = null;
             }
         }
 

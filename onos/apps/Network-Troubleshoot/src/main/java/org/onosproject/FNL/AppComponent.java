@@ -25,6 +25,7 @@ import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
+import org.onlab.packet.EthType;
 import org.onlab.packet.Ip4Prefix;
 import org.onlab.packet.IpPrefix;
 import org.onosproject.net.ConnectPoint;
@@ -36,11 +37,14 @@ import org.onosproject.net.Link;
 import org.onosproject.net.NetworkTroubleshoot.NetworkTS;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.flow.DefaultFlowEntry;
+import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.EthCriterion;
+import org.onosproject.net.flow.criteria.EthTypeCriterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flow.criteria.IPProtocolCriterion;
 import org.onosproject.net.flow.criteria.PortCriterion;
@@ -51,7 +55,14 @@ import org.onosproject.net.link.LinkService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -80,7 +91,10 @@ public class AppComponent implements NetworkTS {
     }
 
 
-    //Loop variant start
+
+
+
+    //Loop Reference start
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DeviceService deviceService;
@@ -94,35 +108,34 @@ public class AppComponent implements NetworkTS {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected LinkService linkService;
 
+    //Loop Reference end
 
-    //Loop variant end
+    private List<tsLoopPacket> findLoop() {
 
-    private void findLoop() {
-
-
+        List<tsLoopPacket> loops = new ArrayList<tsLoopPacket>();
         Set<DeviceId> excludeDeviceId = new HashSet<DeviceId>(); // DeviceId is OK?
-        excludeDeviceId.clear();
 
-        // Iterable<Device> networkDevice = deviceService.getDevices();
-        Iterable<Host> hosts = hostService.getHosts();
         Set<Device> hostConnects = new HashSet<Device>();
-
+        Iterable<Host> hosts = hostService.getHosts();
         for (Host host : hosts) {
             hostConnects.add(deviceService.getDevice(host.location().deviceId()));
         }
+
         for (Device device : hostConnects) {
 
             if (excludeDeviceId.contains(device.id())) {
                 continue;
             }
 
-            Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(device.id()); // API: This will include flow rules which may not yet have been applied to the device.
-
-            // TODO - sort flowtable
+            // TODO - check - sort flowtable
+            Iterable<FlowEntry> flowEntries = sortFlowTable(flowRuleService.getFlowEntries(device.id())); // API: This will include flow rules which may not yet have been applied to the device.
 
             for (FlowEntry flow : flowEntries) {
+
                 tsLoopPacket pkt = tsLoopPacket.matchBuilder(flow.selector().criteria(), null);
+
                 pkt.pushPathFlow(flow);
+                pkt.pushPathDeviceId(device.id());// TODO - Attention!!! - Important!!! differ with me in RYU - need this push, because it pushes LINK in RYU, but DeviceId in ONOS here!
 
                 List<Instruction> inst = flow.treatment().immediate();
 
@@ -147,13 +160,13 @@ public class AppComponent implements NetworkTS {
                                     Link dstThisLink = dstLink.iterator().next();
                                     ConnectPoint dstPoint = dstThisLink.dst(); // TODO - now, just deal with the first destination, will there be more destinations?
 
-                                    if (isDevice(dstPoint)) {
+                                    if (true == isDevice(dstPoint)) {
 
                                         Device dstDevice = deviceService.getDevice(dstPoint.deviceId());
                                         pkt.pushPathDeviceId(dstPoint.deviceId());
 
                                         PortCriterion in_port = pkt.getInport();
-                                        PortCriterion oldIn_port = in_port != null ? (PortCriterion) Criteria.matchInPort(in_port.port()) : null; // TODO - really copy this object
+                                        PortCriterion oldIn_port = null != in_port ? (PortCriterion) Criteria.matchInPort(in_port.port()) : null; // TODO - check if it really copies this object
 
                                         pkt.setHeader(Criteria.matchInPort(dstPoint.port())); // new object
 
@@ -161,7 +174,12 @@ public class AppComponent implements NetworkTS {
 
                                         boolean loopResult = lookup_flow(dstDevice, newPkt);
                                         if (true == loopResult) {
-                                            // TODO
+                                            loops.add(newPkt);
+
+                                            Iterator<DeviceId> iter = newPkt.getPathDevice();
+                                            while (true == iter.hasNext()) {
+                                                excludeDeviceId.add(iter.next()); // false never mind
+                                            }
                                         }
 
                                         pkt.popPathDeviceId();
@@ -169,7 +187,7 @@ public class AppComponent implements NetworkTS {
                                         pkt.setHeader(oldIn_port);
 
 
-                                    } else {
+                                    } else { // Output to a Host
                                         ;
                                     }
                                 } else {
@@ -197,7 +215,7 @@ public class AppComponent implements NetworkTS {
 
         // TODO - another clean operations
 
-        // TODO - return LOOP
+        return loops;
     }
 
     /**
@@ -207,12 +225,11 @@ public class AppComponent implements NetworkTS {
      */
     private boolean lookup_flow(Device device, tsLoopPacket pkt) {
         if (true == pkt.existDeviceId(device.id())) {
-            return true; // TODO - Attention: pkt should be held outside
+            return true; // Attention: pkt should be held outside
         }
 
-        Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(device.id()); // API: This will include flow rules which may not yet have been applied to the device.
-
-        // TODO - sort flowtable
+        // TODO - check - sort flowtable
+        Iterable<FlowEntry> flowEntries = sortFlowTable(flowRuleService.getFlowEntries(device.id())); // API: This will include flow rules which may not yet have been applied to the device.
 
         for (FlowEntry flowEntry : flowEntries) {
 
@@ -223,7 +240,7 @@ public class AppComponent implements NetworkTS {
                 continue;
             }
 
-            newPkt.pushPathFlow(flowEntry); // drop this newPkt, and copy pkt again, no need to popPathFlow()
+            newPkt.pushPathFlow(flowEntry); // no need to popPathFlow(), because we will drop this newPkt, and copy pkt again,
 
             List<Instruction> inst = flowEntry.treatment().immediate();
 
@@ -249,13 +266,13 @@ public class AppComponent implements NetworkTS {
                                 Link dstThisLink = dstLink.iterator().next();
                                 ConnectPoint dstPoint = dstThisLink.dst(); // TODO - now, just deal with the first destination, will there be more destinations?
 
-                                if (isDevice(dstPoint)) {
+                                if (true == isDevice(dstPoint)) {
 
                                     Device dstDevice = deviceService.getDevice(dstPoint.deviceId());
                                     newPkt.pushPathDeviceId(dstPoint.deviceId());
 
                                     PortCriterion in_port = newPkt.getInport();
-                                    PortCriterion oldIn_port = in_port != null ? (PortCriterion) Criteria.matchInPort(in_port.port()) : null; // TODO - really copy this object
+                                    PortCriterion oldIn_port = null != in_port ? (PortCriterion) Criteria.matchInPort(in_port.port()) : null; // TODO - check if it really copies this object
 
                                     newPkt.setHeader(Criteria.matchInPort(dstPoint.port())); // new object
 
@@ -263,8 +280,7 @@ public class AppComponent implements NetworkTS {
 
                                     boolean loopResult = lookup_flow(dstDevice, newNewPkt);
                                     if (true == loopResult) {
-                                        // TODO - check
-                                        pkt = newNewPkt;
+                                        pkt = newNewPkt; // TODO - check - it is able to return the new packet to find_loop()?
                                         return true;
                                     }
 
@@ -273,7 +289,7 @@ public class AppComponent implements NetworkTS {
                                     newPkt.setHeader(oldIn_port);
 
 
-                                } else {
+                                } else { // Output to a Host
                                     ;
                                 }
                             } else {
@@ -299,12 +315,42 @@ public class AppComponent implements NetworkTS {
 
             if (false == isBigger.getValue()) {
                 break;
-            } else {
-
             }
         }
         return false;
     }
+
+    private ArrayList<FlowEntry> sortFlowTable(Iterable<FlowEntry> flowEntries) {
+
+        ArrayList<FlowEntry> flows = new ArrayList<FlowEntry>((HashSet<FlowEntry>) flowEntries);
+
+        Collections.sort(flows,
+                         new Comparator<FlowEntry>() {
+                             // TODO - sort timestamp
+                             @Override
+                             public int compare(FlowEntry f1, FlowEntry f2) {
+                                 return -(f1.priority() - f2.priority());
+                             }
+                         });
+        return flows;
+    }
+    private ArrayList<Criterion> sortCriteria(Criterion[] criterionArray) {
+
+        ArrayList<Criterion> array = (ArrayList<Criterion>) Arrays.asList(criterionArray);
+        Collections.sort(array,
+                         new Comparator<Criterion>() {
+
+                             @Override
+                             public int compare(Criterion c1, Criterion c2) {
+                                 return c1.type().compareTo(c2.type());
+
+                             }
+                         });
+        return array;
+    }
+
+    private final int IP_PROTO_TCP_ts = 6;
+    private final int IP_PROTO_UDP_ts = 17;
 
     /**
      * @param flowEntry
@@ -315,51 +361,43 @@ public class AppComponent implements NetworkTS {
 
         isBigger.setValue(false);
 
-        Set<Criterion> criterionSet = flowEntry.selector().criteria();
-        for (Criterion criterion : criterionSet) {
+        ArrayList<Criterion> criterionArray = sortCriteria((Criterion[]) flowEntry.selector().criteria().toArray());// TODO - check - sort criteria in order of packet headers
+
+        for (Criterion criterion : criterionArray) {
             switch (criterion.type()) {
-                case IN_PORT:
-
+                case IN_PORT:// TODO - advance
+                case ETH_SRC: // At present, not support Ethernet mask (ONOS?)
+                case ETH_DST: // At present, not support Ethernet mask (ONOS?)
+                case ETH_TYPE:
                     if (false == matchAddExactly(pkt, criterion, isBigger)) {
                         return false;
                     }
                     break;
-
-                case ETH_SRC:
-
-                    if (false == matchAddExactly(pkt, criterion, isBigger)) {
-                        return false;
-                    }
-
-                    break;
-                case ETH_DST: // At present, not support Ethernet mask (ONOS)
-
-                    break;
-                case ETH_TYPE: // At present, not support Ethernet mask (ONOS)
-
-                    break;
-                case VLAN_VID: // At present, not support VLAN mask (ONOS)
-                    break;
+                case VLAN_VID: // At present, not support VLAN mask (ONOS?)
                 case VLAN_PCP:
-
+                    if (false == pkt.existHeader(Criterion.Type.ETH_TYPE) ||
+                            false == ((EthTypeCriterion) pkt.getHeader(Criterion.Type.ETH_TYPE)).ethType().equals(EthType.EtherType.VLAN)) {
+                        return false;
+                    }
                     if (false == matchAddExactly(pkt, criterion, isBigger)) {
                         return false;
                     }
-
                     break;
                 case IPV4_SRC:
-
-                    if (false == matchIPV4(pkt,criterion,isBigger))
-                        return false;
-
-                    break;
                 case IPV4_DST:
-
-                    if (false == matchIPV4(pkt,criterion,isBigger))
+                    if (false == pkt.existHeader(Criterion.Type.ETH_TYPE) ||
+                            false == ((EthTypeCriterion) pkt.getHeader(Criterion.Type.ETH_TYPE)).ethType().equals(EthType.EtherType.IPV4)) {
                         return false;
-
+                    }
+                    if (false == matchAddIPV4(pkt, criterion, isBigger)) {
+                        return false;
+                    }
                     break;
                 case IP_PROTO:
+                    if (false == pkt.existHeader(Criterion.Type.ETH_TYPE) ||
+                            false == ((EthTypeCriterion) pkt.getHeader(Criterion.Type.ETH_TYPE)).ethType().equals(EthType.EtherType.IPV4)) {
+                        return false;
+                    }
                     if (false == matchAddExactly(pkt, criterion, isBigger)) {
                         return false;
                     }
@@ -368,32 +406,33 @@ public class AppComponent implements NetworkTS {
                     break;
                 case IP_ECN: // can't be supported by now
                     break;
-                case TCP_SRC: // TCP can't exist with UDP
-                    if(true == pkt.existHeader(Criterion.Type.UDP_SRC) ||
-                            true == pkt.existHeader(Criterion.Type.UDP_DST) ||
-                            (pkt.existHeader(Criterion.Type.IP_PROTO) && ((IPProtocolCriterion)pkt.getHeader(Criterion.Type.IP_PROTO)).protocol() != 6)){
-                        // has TCP match requirement, but can't afford TCP
+                case TCP_SRC:
+                case TCP_DST:
+                    if (false == pkt.existHeader(Criterion.Type.IP_PROTO) ||
+                            IP_PROTO_TCP_ts != ((IPProtocolCriterion) pkt.getHeader(Criterion.Type.IP_PROTO)).protocol()) {
+                        return false; // has TCP match requirement, but can't afford TCP
+                    }
+                    // Done - avoid IP_PROTO locates after TCP_* in this "for" loop
+                    if (false == matchAddExactly(pkt, criterion, isBigger)) {
                         return false;
-                    }else{
-                        // TODO - avoid IP_PROTO locates after TCP_* in this "for" loop
-                        if (false == matchAddExactly(pkt, criterion, isBigger)) {
-                            return false;
-                        }
                     }
                     break;
-                case TCP_DST: // TCP can't exist with UDP
-                    break;
-                case UDP_SRC: // UDP can't exist with TCP
-                    break;
-                case UDP_DST: // UDP can't exist with TCP
+                case UDP_SRC:
+                case UDP_DST:
+                    if (false == pkt.existHeader(Criterion.Type.IP_PROTO) ||
+                            IP_PROTO_UDP_ts != ((IPProtocolCriterion) pkt.getHeader(Criterion.Type.IP_PROTO)).protocol()) {
+                        return false; // has UDP match requirement, but can't afford UDP
+                    }
+                    // Done - avoid IP_PROTO locates after UDP_* in this "for" loop
+                    if (false == matchAddExactly(pkt, criterion, isBigger)) {
+                        return false;
+                    }
                     break;
 
                 default:    //can't be supported by OF1.0
                     break;
             }
-
         }
-
         return true;
     }
 
@@ -414,8 +453,16 @@ public class AppComponent implements NetworkTS {
         return true; // should put it here
     }
 
-    //TODO - check
-    private boolean matchIPV4(tsLoopPacket pkt, Criterion criterion, Return<Boolean> isBigger){
+
+    /**
+     * before invoking me, must check prerequisite
+     *
+     * @param pkt
+     * @param criterion
+     * @param isBigger
+     * @return
+     */
+    private boolean matchAddIPV4(tsLoopPacket pkt, Criterion criterion, Return<Boolean> isBigger) {//TODO - check
 
         if (true == pkt.existHeader(criterion.type())) {
 
@@ -439,7 +486,7 @@ public class AppComponent implements NetworkTS {
             }
 
         } else {
-            // TODO - check prerequisite
+            // Done - no need - check prerequisite - attention the order of criteria in "for" loop
             pkt.setHeader(criterion);
             isBigger.setValue(true);
         }

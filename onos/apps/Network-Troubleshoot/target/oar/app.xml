@@ -17,6 +17,6 @@
 <app name="org.onosproject.FNL.Network-Troubleshoot" origin="Future Network Lab, BUPT" version="1.4.0-SNAPSHOT"
         featuresRepo="mvn:org.onosproject.FNL/Network-Troubleshoot/1.4.0-SNAPSHOT/xml/features"
         features="Network-Troubleshoot">
-    <description>1.0.0, ONOS Network TroubleShoot Module, BUPT</description>
+    <description>1.0.1, ONOS Network TroubleShoot Module, BUPT</description>
     <artifact>mvn:org.onosproject.FNL/Network-Troubleshoot/1.4.0-SNAPSHOT</artifact>
 </app>
