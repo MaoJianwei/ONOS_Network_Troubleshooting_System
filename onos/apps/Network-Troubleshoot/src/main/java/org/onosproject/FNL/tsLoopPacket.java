@@ -21,12 +21,12 @@ public class tsLoopPacket implements Serializable {
 
     public Map<Criterion.Type, Criterion> match;
     public Stack<FlowEntry> pathFlow;
-    public Stack<DeviceId> pathDevice;
+    public Stack<Link> pathLink; // TODO - Upgrade check - To make sure it include just Link but not EdgeLink
 
     tsLoopPacket() {
         match = new HashMap<Criterion.Type, Criterion>();
         pathFlow = new Stack<FlowEntry>();
-        pathDevice = new Stack<DeviceId>();
+        pathLink = new Stack<Link>();
     }
 
     /**
@@ -79,27 +79,31 @@ public class tsLoopPacket implements Serializable {
         return true;
     }
 
-    public Iterator<DeviceId> getPathDevice(){
-        return pathDevice.iterator();
+    public Iterator<Link> getPathLink(){
+        return pathLink.iterator();
     }
 
 
 
-    public boolean pushPathDeviceId(DeviceId deviceId) {
-        pathDevice.push(deviceId);
+    public boolean pushPathLink(Link link) { // TODO - need CPY link manual?
+        pathLink.push(link);
         return true;
     }
 
 
 
-    public boolean popPathDeviceId() {
-        pathDevice.pop();
+    public boolean popPathLink() {
+        pathLink.pop();
         return true;
     }
 
 
-    public boolean existDeviceId(DeviceId deviceId) {
-        return pathDevice.contains(deviceId);
+    public boolean isPassDeviceId(DeviceId deviceId) {
+        for(Link linkTemp : pathLink){
+            if(true == deviceId.equals(linkTemp.src().deviceId()))
+                return true;
+        }
+        return false;
     }
 
 

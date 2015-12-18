@@ -39,6 +39,7 @@ import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultFlowEntry;
 import org.onosproject.net.flow.DefaultTrafficSelector;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.criteria.Criteria;
@@ -87,11 +88,8 @@ public class AppComponent implements NetworkTS {
 
     @Override
     public void debug() {
-        findLoop();
+         findLoop();
     }
-
-
-
 
 
     //Loop Reference start
@@ -135,7 +133,7 @@ public class AppComponent implements NetworkTS {
                 tsLoopPacket pkt = tsLoopPacket.matchBuilder(flow.selector().criteria(), null);
 
                 pkt.pushPathFlow(flow);
-                pkt.pushPathDeviceId(device.id());// TODO - Attention!!! - Important!!! differ with me in RYU - need this push, because it pushes LINK in RYU, but DeviceId in ONOS here!
+                //pkt.pushPathDeviceId(device.id());// obsolete // TO-DO - Attention!!! - Important!!! differ with me in RYU - need this push, because it pushes LINK in RYU, but DeviceId in ONOS here!
 
                 List<Instruction> inst = flow.treatment().immediate();
 
@@ -155,6 +153,15 @@ public class AppComponent implements NetworkTS {
 
                                 Set<Link> dstLink = linkService.getEgressLinks(new ConnectPoint(device.id(), instOutPut.port())); // TODO - debug
 
+                                Iterable<Link> debug_Links = linkService.getLinks();
+                                Iterable<Link> debug_DeviceLinks = linkService.getDeviceLinks(device.id());
+                                Iterable<Link> debug_DeviceEgressLinks = linkService.getDeviceEgressLinks(device.id());
+                                Iterable<Link> debug_DeviceIngressLinks = linkService.getDeviceIngressLinks(device.id());
+                                ConnectPoint test1 = new ConnectPoint(device.id(), instOutPut.port());
+                                Iterable<Link> debug_IngressLinks = linkService.getIngressLinks(test1);
+                                Iterable<Link> debug_EgressLinks = linkService.getEgressLinks(test1);
+                                int count = linkService.getLinkCount();
+
                                 if (false == dstLink.isEmpty()) {
 
                                     Link dstThisLink = dstLink.iterator().next();
@@ -163,7 +170,8 @@ public class AppComponent implements NetworkTS {
                                     if (true == isDevice(dstPoint)) {
 
                                         Device dstDevice = deviceService.getDevice(dstPoint.deviceId());
-                                        pkt.pushPathDeviceId(dstPoint.deviceId());
+
+                                        pkt.pushPathLink(dstThisLink);
 
                                         PortCriterion in_port = pkt.getInport();
                                         PortCriterion oldIn_port = null != in_port ? (PortCriterion) Criteria.matchInPort(in_port.port()) : null; // TODO - check if it really copies this object
@@ -176,13 +184,13 @@ public class AppComponent implements NetworkTS {
                                         if (true == loopResult) {
                                             loops.add(newPkt);
 
-                                            Iterator<DeviceId> iter = newPkt.getPathDevice();
+                                            Iterator<Link> iter = newPkt.getPathLink();
                                             while (true == iter.hasNext()) {
-                                                excludeDeviceId.add(iter.next()); // false never mind
+                                                excludeDeviceId.add(iter.next().src().deviceId()); // false never mind
                                             }
                                         }
 
-                                        pkt.popPathDeviceId();
+                                        pkt.popPathLink();
 
                                         pkt.setHeader(oldIn_port);
 
@@ -224,7 +232,7 @@ public class AppComponent implements NetworkTS {
      * @return
      */
     private boolean lookup_flow(Device device, tsLoopPacket pkt) {
-        if (true == pkt.existDeviceId(device.id())) {
+        if (true == pkt.isPassDeviceId(device.id())) {
             return true; // Attention: pkt should be held outside
         }
 
@@ -269,7 +277,7 @@ public class AppComponent implements NetworkTS {
                                 if (true == isDevice(dstPoint)) {
 
                                     Device dstDevice = deviceService.getDevice(dstPoint.deviceId());
-                                    newPkt.pushPathDeviceId(dstPoint.deviceId());
+                                    newPkt.pushPathLink(dstThisLink);
 
                                     PortCriterion in_port = newPkt.getInport();
                                     PortCriterion oldIn_port = null != in_port ? (PortCriterion) Criteria.matchInPort(in_port.port()) : null; // TODO - check if it really copies this object
@@ -284,7 +292,7 @@ public class AppComponent implements NetworkTS {
                                         return true;
                                     }
 
-                                    newPkt.popPathDeviceId();
+                                    newPkt.popPathLink();
 
                                     newPkt.setHeader(oldIn_port);
 
@@ -334,9 +342,10 @@ public class AppComponent implements NetworkTS {
                          });
         return flows;
     }
-    private ArrayList<Criterion> sortCriteria(Criterion[] criterionArray) {
 
-        ArrayList<Criterion> array = (ArrayList<Criterion>) Arrays.asList(criterionArray);
+    private ArrayList<Criterion> sortCriteria(Set<Criterion> criterionSet) {
+
+        ArrayList<Criterion> array = new ArrayList<Criterion>(criterionSet);
         Collections.sort(array,
                          new Comparator<Criterion>() {
 
@@ -361,7 +370,7 @@ public class AppComponent implements NetworkTS {
 
         isBigger.setValue(false);
 
-        ArrayList<Criterion> criterionArray = sortCriteria((Criterion[]) flowEntry.selector().criteria().toArray());// TODO - check - sort criteria in order of packet headers
+        ArrayList<Criterion> criterionArray = sortCriteria(flowEntry.selector().criteria());// TODO - check - sort criteria in order of packet headers //TODO- check - ERROR temperarily : Object[] can't tranform to Criterion[]
 
         for (Criterion criterion : criterionArray) {
             switch (criterion.type()) {
@@ -496,25 +505,12 @@ public class AppComponent implements NetworkTS {
 
 
     private boolean isDevice(ConnectPoint connectPoint) {        // TODO - not debug yet
-
         return (connectPoint.elementId() instanceof DeviceId);
-
-//        if (connectPoint.elementId() instanceof DeviceId) {
-//            return true;
-//        }
-//        return false;
     }
 
     private boolean isHost(ConnectPoint connectPoint) {          // TODO - not debug yet
-
         return (connectPoint.elementId() instanceof HostId);
-//        if (connectPoint.elementId() instanceof HostId) {
-//            return true;
-//        }
-//        return false;
     }
-
-
 }
 
 
