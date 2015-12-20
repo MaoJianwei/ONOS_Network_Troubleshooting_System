@@ -153,14 +153,14 @@ public class AppComponent implements NetworkTS {
 
                                 Set<Link> dstLink = linkService.getEgressLinks(new ConnectPoint(device.id(), instOutPut.port())); // TODO - debug
 
-                                Iterable<Link> debug_Links = linkService.getLinks();
-                                Iterable<Link> debug_DeviceLinks = linkService.getDeviceLinks(device.id());
-                                Iterable<Link> debug_DeviceEgressLinks = linkService.getDeviceEgressLinks(device.id());
-                                Iterable<Link> debug_DeviceIngressLinks = linkService.getDeviceIngressLinks(device.id());
-                                ConnectPoint test1 = new ConnectPoint(device.id(), instOutPut.port());
-                                Iterable<Link> debug_IngressLinks = linkService.getIngressLinks(test1);
-                                Iterable<Link> debug_EgressLinks = linkService.getEgressLinks(test1);
-                                int count = linkService.getLinkCount();
+//                                Iterable<Link> debug_Links = linkService.getLinks();
+//                                Iterable<Link> debug_DeviceLinks = linkService.getDeviceLinks(device.id());
+//                                Iterable<Link> debug_DeviceEgressLinks = linkService.getDeviceEgressLinks(device.id());
+//                                Iterable<Link> debug_DeviceIngressLinks = linkService.getDeviceIngressLinks(device.id());
+//                                ConnectPoint test1 = new ConnectPoint(device.id(), instOutPut.port());
+//                                Iterable<Link> debug_IngressLinks = linkService.getIngressLinks(test1);
+//                                Iterable<Link> debug_EgressLinks = linkService.getEgressLinks(test1);
+//                                int count = linkService.getLinkCount();
 
                                 if (false == dstLink.isEmpty()) {
 
@@ -178,7 +178,7 @@ public class AppComponent implements NetworkTS {
 
                                         pkt.setHeader(Criteria.matchInPort(dstPoint.port())); // new object
 
-                                        tsLoopPacket newPkt = pkt;// TODO - COPY pkt
+                                        tsLoopPacket newPkt = pkt.copyPacket();// TODO - check - COPY pkt
 
                                         boolean loopResult = lookup_flow(dstDevice, newPkt);
                                         if (true == loopResult) {
@@ -242,7 +242,7 @@ public class AppComponent implements NetworkTS {
         for (FlowEntry flowEntry : flowEntries) {
 
             Return<Boolean> isBigger = new Return<Boolean>();
-            tsLoopPacket newPkt = pkt;// TODO - COPY pkt
+            tsLoopPacket newPkt = pkt.copyPacket();// TODO - check - COPY pkt
             boolean matchResult = matchAndAdd_FlowEntry(flowEntry, newPkt, isBigger);
             if (false == matchResult) {
                 continue;
@@ -280,11 +280,11 @@ public class AppComponent implements NetworkTS {
                                     newPkt.pushPathLink(dstThisLink);
 
                                     PortCriterion in_port = newPkt.getInport();
-                                    PortCriterion oldIn_port = null != in_port ? (PortCriterion) Criteria.matchInPort(in_port.port()) : null; // TODO - check if it really copies this object
+                                    PortCriterion oldIn_port = null != in_port ? (PortCriterion) Criteria.matchInPort(in_port.port()) : null; // TODO - check - if it really copies this object
 
                                     newPkt.setHeader(Criteria.matchInPort(dstPoint.port())); // new object
 
-                                    tsLoopPacket newNewPkt = newPkt;// TODO - COPY pkt
+                                    tsLoopPacket newNewPkt = newPkt.copyPacket();// TODO - check - COPY pkt
 
                                     boolean loopResult = lookup_flow(dstDevice, newNewPkt);
                                     if (true == loopResult) {

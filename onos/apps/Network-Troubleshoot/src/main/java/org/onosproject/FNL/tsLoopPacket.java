@@ -6,6 +6,10 @@ import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.PortCriterion;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,15 +23,35 @@ import java.util.Stack;
  */
 public class tsLoopPacket implements Serializable {
 
-    public Map<Criterion.Type, Criterion> match;
-    public Stack<FlowEntry> pathFlow;
-    public Stack<Link> pathLink; // TODO - Upgrade check - To make sure it include just Link but not EdgeLink
+    private Map<Criterion.Type, Criterion> match;
+    private Stack<FlowEntry> pathFlow;
+    private Stack<Link> pathLink; // TODO - Upgrade check - To make sure it include just Link but not EdgeLink
 
-    tsLoopPacket() {
+    private tsLoopPacket() {
         match = new HashMap<Criterion.Type, Criterion>();
         pathFlow = new Stack<FlowEntry>();
         pathLink = new Stack<Link>();
     }
+
+
+    public tsLoopPacket copyPacket() {
+        Object ret = null;
+        try {
+            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+            ObjectOutputStream objOut = new ObjectOutputStream(byteOut);
+            objOut.writeObject(this);
+            objOut.close();
+
+            ByteArrayInputStream byteIn = new ByteArrayInputStream(byteOut.toByteArray());
+            ObjectInputStream objIn = new ObjectInputStream(byteIn);
+            ret = objIn.readObject();
+            objIn.close();
+        } catch (Exception e) { // ClassNotFoundException | IOException | anything else?
+            e.printStackTrace();
+        }
+        return (tsLoopPacket)ret;
+    }
+
 
     /**
      * @return constant SetHeader_*
@@ -55,7 +79,6 @@ public class tsLoopPacket implements Serializable {
     }
 
 
-
     public Criterion getHeader(Criterion.Type criterionType) {
         return match.get(criterionType); // TODO - check is null when the key is not contained?
     }
@@ -65,13 +88,10 @@ public class tsLoopPacket implements Serializable {
     }
 
 
-
-
     public boolean pushPathFlow(FlowEntry entry) {
         pathFlow.push(entry);
         return true;
     }
-
 
 
     public boolean popPathFlow() {// no need
@@ -79,17 +99,15 @@ public class tsLoopPacket implements Serializable {
         return true;
     }
 
-    public Iterator<Link> getPathLink(){
+    public Iterator<Link> getPathLink() {
         return pathLink.iterator();
     }
-
 
 
     public boolean pushPathLink(Link link) { // TODO - need CPY link manual?
         pathLink.push(link);
         return true;
     }
-
 
 
     public boolean popPathLink() {
@@ -99,9 +117,10 @@ public class tsLoopPacket implements Serializable {
 
 
     public boolean isPassDeviceId(DeviceId deviceId) {
-        for(Link linkTemp : pathLink){
-            if(true == deviceId.equals(linkTemp.src().deviceId()))
+        for (Link linkTemp : pathLink) {
+            if (true == deviceId.equals(linkTemp.src().deviceId())) {
                 return true;
+            }
         }
         return false;
     }
@@ -112,10 +131,6 @@ public class tsLoopPacket implements Serializable {
             return (PortCriterion) match.get(Criterion.Type.IN_PORT);
         }
         return null;
-    }
-
-    public tsLoopPacket copyBuild() {
-        return this; // TODO
     }
 
 
@@ -138,13 +153,13 @@ public class tsLoopPacket implements Serializable {
 
             int ret = pkt.setHeader(criterion);
 
-            if(SetHeader_SUCCESS == ret){
+            if (SetHeader_SUCCESS == ret) {
 
-            }else if (SetHeader_OVERRIDE == ret){
+            } else if (SetHeader_OVERRIDE == ret) {
                 if (null != collision) {
                     collision.setValue(true);
                 }
-            }else{ // SetHeader_FAILURE
+            } else { // SetHeader_FAILURE
                 pkt = null;
             }
         }

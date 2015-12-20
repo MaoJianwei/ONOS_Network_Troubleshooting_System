@@ -1,0 +1,33 @@
+Manifest-Version: 1.0
+Bnd-LastModified: 1450509201375
+Build-Jdk: 1.8.0_66
+Built-By: mao
+Bundle-Description: 1.0.1, ONOS Network TroubleShoot Module, BUPT
+Bundle-License: http://www.apache.org/licenses/LICENSE-2.0.txt
+Bundle-ManifestVersion: 2
+Bundle-Name: Network-Troubleshoot
+Bundle-SymbolicName: org.onosproject.FNL.Network-Troubleshoot
+Bundle-Version: 1.4.0.SNAPSHOT
+Created-By: Apache Maven Bundle Plugin
+Export-Package: org.onosproject.FNL;uses:="org.onosproject.net,org.onosp
+ roject.net.NetworkTroubleshoot,org.onosproject.net.device,org.onosproje
+ ct.net.flow,org.onosproject.net.flow.criteria,org.onosproject.net.host,
+ org.onosproject.net.link";version="1.4.0"
+Import-Package: org.onlab.packet;version="[1.4,2)",org.onosproject.net;v
+ ersion="[1.4,2)",org.onosproject.net.NetworkTroubleshoot;version="[1.4,
+ 2)",org.onosproject.net.device;version="[1.4,2)",org.onosproject.net.fl
+ ow;version="[1.4,2)",org.onosproject.net.flow.criteria;version="[1.4,2)
+ ",org.onosproject.net.flow.instructions;version="[1.4,2)",org.onosproje
+ ct.net.host;version="[1.4,2)",org.onosproject.net.link;version="[1.4,2)
+ ",org.slf4j;version="[1.7,2)"
+Provide-Capability: osgi.service;effective:=active;objectClass="org.onos
+ project.net.NetworkTroubleshoot.NetworkTS"
+Require-Capability: osgi.service;effective:=active;filter:="(objectClass
+ =org.onosproject.net.flow.FlowRuleService)",osgi.service;effective:=act
+ ive;filter:="(objectClass=org.onosproject.net.device.DeviceService)",os
+ gi.service;effective:=active;filter:="(objectClass=org.onosproject.net.
+ host.HostService)",osgi.service;effective:=active;filter:="(objectClass
+ =org.onosproject.net.link.LinkService)",osgi.ee;filter:="(&(osgi.ee=Jav
+ aSE)(version=1.8))"
+Service-Component: OSGI-INF/org.onosproject.FNL.AppComponent.xml
+Tool: Bnd-2.4.0.201411031534
