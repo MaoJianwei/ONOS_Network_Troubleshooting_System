@@ -26,7 +26,6 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.apache.felix.scr.annotations.Service;
 import org.onlab.packet.EthType;
-import org.onlab.packet.Ip4Prefix;
 import org.onlab.packet.IpPrefix;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.Device;
@@ -37,14 +36,10 @@ import org.onosproject.net.Link;
 import org.onosproject.net.NetworkTroubleshoot.NetworkTS;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
-import org.onosproject.net.flow.DefaultFlowEntry;
-import org.onosproject.net.flow.DefaultTrafficSelector;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.criteria.Criterion;
-import org.onosproject.net.flow.criteria.EthCriterion;
 import org.onosproject.net.flow.criteria.EthTypeCriterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flow.criteria.IPProtocolCriterion;
@@ -56,10 +51,7 @@ import org.onosproject.net.link.LinkService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -108,9 +100,9 @@ public class AppComponent implements NetworkTS {
 
     //Loop Reference end
 
-    private List<tsLoopPacket> findLoop() {
+    private List<TsLoopPacket> findLoop() {
 
-        List<tsLoopPacket> loops = new ArrayList<tsLoopPacket>();
+        List<TsLoopPacket> loops = new ArrayList<TsLoopPacket>();
         Set<DeviceId> excludeDeviceId = new HashSet<DeviceId>(); // DeviceId is OK?
 
         Set<Device> hostConnects = new HashSet<Device>();
@@ -130,7 +122,7 @@ public class AppComponent implements NetworkTS {
 
             for (FlowEntry flow : flowEntries) {
 
-                tsLoopPacket pkt = tsLoopPacket.matchBuilder(flow.selector().criteria(), null);
+                TsLoopPacket pkt = TsLoopPacket.matchBuilder(flow.selector().criteria(), null);
 
                 pkt.pushPathFlow(flow);
                 //pkt.pushPathDeviceId(device.id());// obsolete // TO-DO - Attention!!! - Important!!! differ with me in RYU - need this push, because it pushes LINK in RYU, but DeviceId in ONOS here!
@@ -153,15 +145,6 @@ public class AppComponent implements NetworkTS {
 
                                 Set<Link> dstLink = linkService.getEgressLinks(new ConnectPoint(device.id(), instOutPut.port())); // TODO - debug
 
-//                                Iterable<Link> debug_Links = linkService.getLinks();
-//                                Iterable<Link> debug_DeviceLinks = linkService.getDeviceLinks(device.id());
-//                                Iterable<Link> debug_DeviceEgressLinks = linkService.getDeviceEgressLinks(device.id());
-//                                Iterable<Link> debug_DeviceIngressLinks = linkService.getDeviceIngressLinks(device.id());
-//                                ConnectPoint test1 = new ConnectPoint(device.id(), instOutPut.port());
-//                                Iterable<Link> debug_IngressLinks = linkService.getIngressLinks(test1);
-//                                Iterable<Link> debug_EgressLinks = linkService.getEgressLinks(test1);
-//                                int count = linkService.getLinkCount();
-
                                 if (false == dstLink.isEmpty()) {
 
                                     Link dstThisLink = dstLink.iterator().next();
@@ -178,7 +161,7 @@ public class AppComponent implements NetworkTS {
 
                                         pkt.setHeader(Criteria.matchInPort(dstPoint.port())); // new object
 
-                                        tsLoopPacket newPkt = pkt.copyPacket();// TODO - check - COPY pkt
+                                        TsLoopPacket newPkt = pkt.copyPacketMatch();// TODO - check - COPY pkt
 
                                         boolean loopResult = lookup_flow(dstDevice, newPkt);
                                         if (true == loopResult) {
@@ -231,7 +214,7 @@ public class AppComponent implements NetworkTS {
      * @param pkt    : when flows form a loop, pkt is also a return value indicating the loop header
      * @return
      */
-    private boolean lookup_flow(Device device, tsLoopPacket pkt) {
+    private boolean lookup_flow(Device device, TsLoopPacket pkt) {
         if (true == pkt.isPassDeviceId(device.id())) {
             return true; // Attention: pkt should be held outside
         }
@@ -242,7 +225,7 @@ public class AppComponent implements NetworkTS {
         for (FlowEntry flowEntry : flowEntries) {
 
             Return<Boolean> isBigger = new Return<Boolean>();
-            tsLoopPacket newPkt = pkt.copyPacket();// TODO - check - COPY pkt
+            TsLoopPacket newPkt = pkt.copyPacketMatch();// TODO - check - COPY pkt
             boolean matchResult = matchAndAdd_FlowEntry(flowEntry, newPkt, isBigger);
             if (false == matchResult) {
                 continue;
@@ -284,7 +267,7 @@ public class AppComponent implements NetworkTS {
 
                                     newPkt.setHeader(Criteria.matchInPort(dstPoint.port())); // new object
 
-                                    tsLoopPacket newNewPkt = newPkt.copyPacket();// TODO - check - COPY pkt
+                                    TsLoopPacket newNewPkt = newPkt.copyPacketMatch();// TODO - check - COPY pkt
 
                                     boolean loopResult = lookup_flow(dstDevice, newNewPkt);
                                     if (true == loopResult) {
@@ -320,6 +303,8 @@ public class AppComponent implements NetworkTS {
 
 
             }
+
+            newPkt.popPathFlow();
 
             if (false == isBigger.getValue()) {
                 break;
@@ -366,7 +351,7 @@ public class AppComponent implements NetworkTS {
      * @param pkt       will be updated for outside
      * @return match result
      */
-    private boolean matchAndAdd_FlowEntry(FlowEntry flowEntry, tsLoopPacket pkt, Return<Boolean> isBigger) {
+    private boolean matchAndAdd_FlowEntry(FlowEntry flowEntry, TsLoopPacket pkt, Return<Boolean> isBigger) {
 
         isBigger.setValue(false);
 
@@ -445,7 +430,7 @@ public class AppComponent implements NetworkTS {
         return true;
     }
 
-    private boolean matchAddExactly(tsLoopPacket pkt, Criterion criterion, Return<Boolean> isBigger) {
+    private boolean matchAddExactly(TsLoopPacket pkt, Criterion criterion, Return<Boolean> isBigger) {
 
         if (true == pkt.existHeader(criterion.type())) {
             if (false == pkt.getHeader(criterion.type()).equals(criterion)) // Done - Checked - it will invoke the criterion's equal()
@@ -471,7 +456,7 @@ public class AppComponent implements NetworkTS {
      * @param isBigger
      * @return
      */
-    private boolean matchAddIPV4(tsLoopPacket pkt, Criterion criterion, Return<Boolean> isBigger) {//TODO - check
+    private boolean matchAddIPV4(TsLoopPacket pkt, Criterion criterion, Return<Boolean> isBigger) {//TODO - check
 
         if (true == pkt.existHeader(criterion.type())) {
 

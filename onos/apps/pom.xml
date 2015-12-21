@@ -30,8 +30,6 @@
 
     <modules>
         <module>Network-Troubleshoot</module>
-        <!-- <module>Mao-Ether-Fwd</module> -->
-        <!-- <module>MaoTopologyStudy</module> -->
         <module>aaa</module>
         <module>acl</module>
         <module>fwd</module>
