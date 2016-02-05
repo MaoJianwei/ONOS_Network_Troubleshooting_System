@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?><components xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0">
+    <scr:component immediate="false" name="org.onosproject.fnl.impl.NetworkTsCheckLoop" activate="activate" deactivate="deactivate">
+        <implementation class="org.onosproject.fnl.impl.NetworkTsCheckLoop"/>
+        <service servicefactory="false">
+            <provide interface="org.onosproject.fnl.intf.NetWorkTsCheckLoopService"/>
+        </service>
+        <property name="service.pid" value="org.onosproject.fnl.impl.NetworkTsCheckLoop"/>
+        <reference name="coreService" interface="org.onosproject.core.CoreService" cardinality="1..1" policy="static" bind="bindCoreService" unbind="unbindCoreService"/>
+        <reference name="deviceService" interface="org.onosproject.net.device.DeviceService" cardinality="1..1" policy="static" bind="bindDeviceService" unbind="unbindDeviceService"/>
+        <reference name="hostService" interface="org.onosproject.net.host.HostService" cardinality="1..1" policy="static" bind="bindHostService" unbind="unbindHostService"/>
+        <reference name="flowRuleService" interface="org.onosproject.net.flow.FlowRuleService" cardinality="1..1" policy="static" bind="bindFlowRuleService" unbind="unbindFlowRuleService"/>
+        <reference name="linkService" interface="org.onosproject.net.link.LinkService" cardinality="1..1" policy="static" bind="bindLinkService" unbind="unbindLinkService"/>
+    </scr:component>
+</components>
