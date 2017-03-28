@@ -22,6 +22,6 @@ You can find our code in ONOS above 1.10.0-SNAPSHOT or 1.10.0 version
 
 .
 
-Future Network Laboratory(FNLab), Beijing University of Posts and Telecommunications
+Future Network Laboratory(FNLab), Beijing University of Posts and Telecommunications(BUPT)
 
 2017.03.28
