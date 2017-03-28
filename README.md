@@ -12,11 +12,11 @@ You can find our code in ONOS above 1.10.0-SNAPSHOT or 1.10.0 version
 
 ## Partner
 
-* Architect: [Jianwei Mao](https://wiki.onosproject.org/display/AM/Jianwei+Mao)
+* Architect: [Jianwei Mao](https://wiki.onosproject.org/display/AM/Jianwei+Mao) - [Blog](http://www.maojianwei.com/)
 
-* Routing Loop Detection module: [Jianwei Mao](https://wiki.onosproject.org/display/AM/Jianwei+Mao)
+* Routing Loop Detection module: [Jianwei Mao](https://wiki.onosproject.org/display/AM/Jianwei+Mao) - [Blog](http://www.maojianwei.com/)
 
-* Blackhole Tracing module: [Janon Wang](https://wiki.onosproject.org/display/AM/Janon+Wang)
+* Blackhole Tracing module: [Janon Wang](https://wiki.onosproject.org/display/AM/Janon+Wang) - [Blog](http://janon.wang/)
 
 * Wiki Page: Rui Cao
 
