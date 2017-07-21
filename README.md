@@ -8,6 +8,10 @@ Full discription and commit message is here:
 
 You can find our code in ONOS above 1.10.0-SNAPSHOT or 1.10.0 version
 
+* **network-troubleshoot** is the code merged into ONOS
+* **network-troubleshoot-maven-central-repo-ready** is the modified code for submitting to [Maven Central Repository](https://search.maven.org/#search%7Cga%7C1%7Cmaojianwei)
+
+
 .
 
 ## Partner
